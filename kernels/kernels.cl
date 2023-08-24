@@ -498,3 +498,19 @@ __kernel void set_Q_next(__write_only image3d_t Q_next,
 
   write_imagef(Q_next, (int4)(i,j,k,0), 1.0f/3.0f*Q_prev(i,j,k) + 2.0f/3.0f*Q_2(i,j,k) + 2.0f/3.0f*(-delta_t/delta_x*(F(i+1,j,k)-F(i,j,k)) - delta_t/delta_y*(G(i,j+1,k)-G(i,j,k))));
 }
+
+__kernel void copy_image_3d_to_2d(__read_only image3d_t image_src,
+				  __write_only image2d_t image_dest) {
+  size_t i = get_global_id(0);
+  size_t j = get_global_id(1);
+
+  size_t offset_x = get_global_offset(0);
+  size_t offset_y = get_global_offset(1);
+
+  float4 color = (float4)(read_imagef(image_src, (int4)(i,j,0,0)).x,
+			  read_imagef(image_src, (int4)(i,j,1,0)).x,
+			  read_imagef(image_src, (int4)(i,j,2,0)).x,
+			  read_imagef(image_src, (int4)(i,j,3,0)).x);
+
+  write_imagef(image_dest, (int2)(i-offset_x,j-offset_y), color);
+}

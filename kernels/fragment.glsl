@@ -2,7 +2,7 @@
 
 #define NB_COLORS 6
 
-uniform sampler3D tex;
+uniform sampler2D tex;
 
 uniform float min;
 uniform float max;
@@ -20,7 +20,7 @@ vec4 color_map[NB_COLORS+1] = {vec4(0.0f,   0.0f,   0.0f,   1.0f),
 			       vec4(0.976f, 0.984f, 0.051f, 1.0f)};
 
 void main(void) {
-  float normalized_value = (texture(tex, vec3(texture_coord, 0.0)).r-min)/(max-min);
+  float normalized_value = (texture(tex, texture_coord).x-min)/(max-min);
 
   int idx = int(floor(normalized_value*NB_COLORS));
 

@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-ggdb -std=c11 -O3 -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wshadow -march=native -mtune=native -fno-omit-frame-pointer -DCL_TARGET_OPENCL_VERSION=220 -DDEBUG
 
-LDFLAGS=-lOpenCL -lGL -lGLEW -lSDL2 -lm
+LDFLAGS=-lOpenCL -lGL -lSDL2 -lm -L/home/mael/projects/glew-2.1.0/lib -lGLEW -lEGL -Wl,-rpath=/home/mael/projects/glew-2.1.0/lib
 
 BUILD_DIR=./build
 HEADERS=$(wildcard *.h)

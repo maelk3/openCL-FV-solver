@@ -49,6 +49,11 @@ static GLuint link_program(GLuint* shaders, size_t nb_shaders);
 preview_context_t* previewer_init(void) {
   preview_context_t* ctx = malloc(sizeof(*ctx));
 
+  if(!SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "SDL_TRUE")) {
+    printf("tsetsetsttst\n");
+    exit(EXIT_FAILURE);
+   }
+
  ctx->sdl.window = SDL_CreateWindow("Kelvin-Helmholtz instability",
 				    SDL_WINDOWPOS_CENTERED,
 				    SDL_WINDOWPOS_CENTERED,
@@ -105,7 +110,7 @@ preview_context_t* previewer_init(void) {
 	       GL_STATIC_DRAW);
 
   glGenTextures(1, &ctx->gl.texture);
-  glBindTexture(GL_TEXTURE_3D, ctx->gl.texture);
+  glBindTexture(GL_TEXTURE_2D, ctx->gl.texture);
   glActiveTexture(GL_TEXTURE0);
 
   glGenSamplers(1, &ctx->gl.sampler);
@@ -113,8 +118,7 @@ preview_context_t* previewer_init(void) {
   glSamplerParameteri(ctx->gl.sampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glSamplerParameteri(ctx->gl.sampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-  glTexStorage3D(GL_TEXTURE_3D, 1, GL_R32F, WIDTH, HEIGHT, DEPTH);
-  glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, WIDTH, HEIGHT, DEPTH, GL_RED, GL_FLOAT,  NULL);
+  glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, WIDTH-2*LOCAL_WORK_SIZE_X, HEIGHT-2*LOCAL_WORK_SIZE_Y);
 
   char* vertex_shader_source = read_file("./kernels/vertex.glsl", NULL);
   char* fragment_shader_source = read_file("./kernels/fragment.glsl", NULL);
@@ -178,9 +182,9 @@ void* previewer_get_display(preview_context_t* context) {
     }
   if(info.subsystem == SDL_SYSWM_WAYLAND){
     printf("using wayland\n");
-    return info.info.x11.display;
-  }else if(info.subsystem == SDL_SYSWM_X11){
     return info.info.wl.display;
+  }else if(info.subsystem == SDL_SYSWM_X11){
+    return info.info.x11.display;
   }else{
     fprintf(stderr, "Could not determine windowing system\n");
     exit(EXIT_FAILURE);

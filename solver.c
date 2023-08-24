@@ -4,6 +4,7 @@
 
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
+#include <EGL/egl.h>
 
 typedef struct solver_context_t {
   cl_context context;
@@ -16,7 +17,7 @@ typedef struct solver_context_t {
   float delta_t;
   cl_program program;
   struct {
-    cl_mem Q_prev, Q_next, Q_1, Q_2;
+    cl_mem Q_prev, Q_next, Q_next_bis, Q_1, Q_2;
     cl_mem Q_l, Q_r, Q_u, Q_d;
     cl_mem F, G;
     cl_mem S_x, S_y;
@@ -36,6 +37,7 @@ typedef struct solver_context_t {
     cl_kernel set_Q_1;
     cl_kernel set_Q_2;
     cl_kernel set_Q_next;
+    cl_kernel copy_image_3d_to_2d;
   } kernels;
 } solver_context_t;
 
@@ -180,8 +182,8 @@ solver_context_t* solver_init(preview_context_t* preview_ctx) {
 
   cl_context_properties context_properties[] = {
     CL_CONTEXT_PLATFORM, (cl_context_properties) platform_id,
-    CL_GL_CONTEXT_KHR, (cl_context_properties) previewer_get_gl_context(preview_ctx),
-    CL_GLX_DISPLAY_KHR, (cl_context_properties) previewer_get_display(preview_ctx),
+    CL_GL_CONTEXT_KHR, (cl_context_properties) eglGetCurrentContext(),
+    CL_EGL_DISPLAY_KHR, (cl_context_properties) eglGetCurrentDisplay(),
     0};
 
   free(platform_ids);
@@ -215,12 +217,12 @@ solver_context_t* solver_init(preview_context_t* preview_ctx) {
 
   solver_ctx->program = build_program_from_source("./kernels/kernels.cl", "-cl-std=CL2.0", solver_ctx->context, solver_ctx->device_id);
 
-  solver_ctx->buffers.Q_next = clCreateFromGLTexture(solver_ctx->context,
-						     CL_MEM_READ_WRITE,
-						     GL_TEXTURE_3D,
-						     0,
-						     previewer_get_texture(preview_ctx),
-						     &error_code);
+  solver_ctx->buffers.Q_next_bis = clCreateFromGLTexture(solver_ctx->context,
+							 CL_MEM_READ_WRITE,
+							 GL_TEXTURE_2D,
+							 0,
+							 previewer_get_texture(preview_ctx),
+							 &error_code);
   OPENCL_CATCH_ERROR(error_code);
 
   cl_image_format image_format = {
@@ -236,6 +238,8 @@ solver_context_t* solver_init(preview_context_t* preview_ctx) {
   };
 
   // create all the openCL image objects and buffers
+  solver_ctx->buffers.Q_next = clCreateImage(solver_ctx->context, CL_MEM_READ_WRITE, &image_format, &image_desc_3D_image, NULL, &error_code);
+  OPENCL_CATCH_ERROR(error_code);
   solver_ctx->buffers.Q_prev = clCreateImage(solver_ctx->context, CL_MEM_READ_WRITE, &image_format, &image_desc_3D_image, NULL, &error_code);
   OPENCL_CATCH_ERROR(error_code);
   solver_ctx->buffers.Q_1 = clCreateImage(solver_ctx->context, CL_MEM_READ_WRITE, &image_format, &image_desc_3D_image, NULL, &error_code);
@@ -297,9 +301,8 @@ solver_context_t* solver_init(preview_context_t* preview_ctx) {
   OPENCL_CATCH_ERROR(error_code);
   solver_ctx->kernels.set_Q_next = clCreateKernel(solver_ctx->program, "set_Q_next", &error_code);
   OPENCL_CATCH_ERROR(error_code);
-
-  // initialize the image with the initial conditions
-  clEnqueueAcquireGLObjects(solver_ctx->queue, 1, &solver_ctx->buffers.Q_next, 0, NULL, NULL);
+  solver_ctx->kernels.copy_image_3d_to_2d = clCreateKernel(solver_ctx->program, "copy_image_3d_to_2d", &error_code);
+  OPENCL_CATCH_ERROR(error_code);
 
   const size_t global_work_offset[] = {LOCAL_WORK_SIZE_X, LOCAL_WORK_SIZE_Y};
   const size_t global_work_size[]   = {WIDTH-2*LOCAL_WORK_SIZE_X, HEIGHT-2*LOCAL_WORK_SIZE_Y};
@@ -319,16 +322,13 @@ solver_context_t* solver_init(preview_context_t* preview_ctx) {
   solver_set_periodic_boundary_conditions(solver_ctx, solver_ctx->buffers.Q_next);
 
   solver_compute_density_range(solver_ctx);
-
-  clEnqueueReleaseGLObjects(solver_ctx->queue, 1, &solver_ctx->buffers.Q_next, 0, NULL, NULL);
-  OPENCL_CATCH_ERROR(error_code);
   clFinish(solver_ctx->queue);
 
   return solver_ctx;
 }
 
 void solver_run(solver_context_t* ctx) {
-  OPENCL_CATCH_ERROR(clEnqueueAcquireGLObjects(ctx->queue, 1, &ctx->buffers.Q_next, 0, NULL, NULL));
+  OPENCL_CATCH_ERROR(clEnqueueAcquireGLObjects(ctx->queue, 1, &ctx->buffers.Q_next_bis, 0, NULL, NULL));
 
   size_t origin[] = {0, 0, 0};
   size_t region[] = {WIDTH, HEIGHT, DEPTH};
@@ -419,18 +419,35 @@ void solver_run(solver_context_t* ctx) {
 
   solver_set_periodic_boundary_conditions(ctx, ctx->buffers.Q_next);
 
+  const size_t global_work_offset_copy[] = {LOCAL_WORK_SIZE_X, LOCAL_WORK_SIZE_Y};
+  const size_t global_work_size_copy[]   = {WIDTH-2*LOCAL_WORK_SIZE_X, HEIGHT-2*LOCAL_WORK_SIZE_Y};
+  const size_t local_work_size_copy[]    = {LOCAL_WORK_SIZE_X, LOCAL_WORK_SIZE_Y};
+
+  OPENCL_CATCH_ERROR(clSetKernelArg(ctx->kernels.copy_image_3d_to_2d, 0, sizeof(cl_mem), &ctx->buffers.Q_next));
+  OPENCL_CATCH_ERROR(clSetKernelArg(ctx->kernels.copy_image_3d_to_2d, 1, sizeof(cl_mem), &ctx->buffers.Q_next_bis));
+  OPENCL_CATCH_ERROR(clEnqueueNDRangeKernel(ctx->queue,
+					    ctx->kernels.copy_image_3d_to_2d,
+					    2,
+					    global_work_offset_copy,
+					    global_work_size_copy,
+					    local_work_size_copy,
+					    0,
+					    NULL,
+					    NULL));
+
   ctx->t += ctx->delta_t;
 
   printf("t:%f, delta_t:%f\n", ctx->t, ctx->delta_t);
 
   solver_compute_density_range(ctx);
 
-  OPENCL_CATCH_ERROR(clEnqueueReleaseGLObjects(ctx->queue, 1, &ctx->buffers.Q_next, 0, NULL, NULL));
+  OPENCL_CATCH_ERROR(clEnqueueReleaseGLObjects(ctx->queue, 1, &ctx->buffers.Q_next_bis, 0, NULL, NULL));
   clFinish(ctx->queue);
 }
 
 void solver_deinit(solver_context_t* ctx) {
   clReleaseMemObject(ctx->buffers.Q_next);
+  clReleaseMemObject(ctx->buffers.Q_next_bis);
   clReleaseMemObject(ctx->buffers.Q_prev);
   clReleaseMemObject(ctx->buffers.Q_1);
   clReleaseMemObject(ctx->buffers.Q_2);
@@ -579,7 +596,7 @@ static void solver_compute_density_range(solver_context_t* ctx) {
   for(size_t i=1; i<global_work_size_second_reduction[0]/local_work_size_second_reduction[0]; i++)
     max = fminf(min, min_values[i]);
   ctx->rho_min = min;
-  OPENCL_CATCH_ERROR(clEnqueueUnmapMemObject(ctx->queue, ctx->buffers.min, max_values, 0, 0, NULL));
+  OPENCL_CATCH_ERROR(clEnqueueUnmapMemObject(ctx->queue, ctx->buffers.min, min_values, 0, 0, NULL));
 }
 
 float solver_get_min_density(solver_context_t* ctx) {

@@ -8,7 +8,7 @@ A compressible Euler equation GPU finite volume solver to simulate the Kelvin-He
 
 - openCL 2.0 or above
 - openGL 4.3 or above and a GPU with the `cl_khr_gl_sharing` extension
-- GLEW
+- GLEW compiled with `-DGLEW_EGL`
 - SDL2
 
 ## Build
