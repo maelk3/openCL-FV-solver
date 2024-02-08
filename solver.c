@@ -85,16 +85,16 @@ static cl_int __error;
 // This macro prints to stderr the opencl error name with the current
 // line number and file name and terminates the program with
 // EXIT_FAILURE in DEBUG mode.
-#define OPENCL_CATCH_ERROR(x) {                          \
-    cl_int __err_code = (x);				 \
-  if(__err_code != 0) {                                  \
-    fprintf(stderr, "OpenCL error %s caught in %s:%d\n", \
-	    get_error_string(x),                         \
-	    __FILE__,                                    \
-	    __LINE__);                                   \
-    exit(EXIT_FAILURE);                                  \
-  }                                                      \
-}
+#define OPENCL_CATCH_ERROR(x) do {				\
+    cl_int __err_code = (x);					\
+    if(__err_code != 0) {					\
+      fprintf(stderr, "OpenCL error %s caught in %s:%d\n",	\
+	      get_error_string(x),				\
+	      __FILE__,						\
+	      __LINE__);					\
+      exit(EXIT_FAILURE);					\
+    }								\
+  } while (0)
 
 #define CASE_RETURN_STRING(x) case x: return #x;
 
