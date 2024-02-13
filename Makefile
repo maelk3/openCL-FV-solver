@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-ggdb -std=c11 -O3 -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wshadow -march=native -mtune=native -fno-omit-frame-pointer -DCL_TARGET_OPENCL_VERSION=220 -DDEBUG
+CFLAGS=-ggdb -std=c11 -O3 -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wshadow -march=native -mtune=native -fno-omit-frame-pointer -DCL_TARGET_OPENCL_VERSION=220
 
 LDFLAGS=-lOpenCL -lGL -lGLEW -lSDL2 -lm
 

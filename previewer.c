@@ -32,18 +32,18 @@ typedef struct preview_context_t {
 } preview_context_t;
 
 #ifdef DEBUG
-// debug callback function called if GL_DEBUG_OUTPUT is set
+/** debug callback function called if GL_DEBUG_OUTPUT is set */
 static void opengl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
 					  GLsizei length, const GLchar* message, const void* userParam);
 #endif
 
-// returns an GLuint representing the compiled shader source if
-// sucessful. Otherwise the program exits with EXIT_FAILURE
+/** returns an GLuint representing the compiled shader source if
+ * sucessful. Otherwise the program exits with EXIT_FAILURE */
 static GLuint compile_shader(const char* shader_source, GLenum shader_type);
 
-// returns an GLuint representing the linked program of `nb_shaders'
-// compiled shaders if sucessful. Otherwise the program exits with
-// EXIT_FAILURE
+/** returns an GLuint representing the linked program of `nb_shaders'
+ * compiled shaders if sucessful. Otherwise the program exits with
+ * EXIT_FAILURE */
 static GLuint link_program(GLuint* shaders, size_t nb_shaders);
 
 preview_context_t* previewer_init(void) {

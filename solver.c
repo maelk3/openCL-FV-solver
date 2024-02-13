@@ -39,50 +39,46 @@ typedef struct solver_context_t {
   } kernels;
 } solver_context_t;
 
-// callback function by the openCL driver on context errors
+/** callback function by the openCL driver on context errors */
 static void cl_context_callback(const char* errinfo, const void* private_info, size_t cb, void* user_data);
 
 #ifdef DEBUG
-// returns a static error string corresponding to the openCL error
-// code
+/** returns a static error string corresponding to the openCL error
+ * code */
 static const char* get_error_string(cl_int error);
 #endif
 
-// Creates an openCL program object associated with `context` and
-// builds the source file in `filepath` for device `device_id` with
-// build options `build_options`
+/** Creates an openCL program object associated with `context` and
+ * builds the source file in `filepath` for device `device_id` with
+ * build options `build_options` */
 static cl_program build_program_from_source(const char* filepath, const char* build_options, cl_context context, cl_device_id device_id);
 
-// computes the range of values taken by a slice of the 3d image
-// `ctx->buffers.Q_init` representing the density and stores it in the
-// context. Note that clEnqueueAcquireGLObjects must be called ahead
-// of tile to be able to read the shared texture between openGL and
-// openCL
+/** computes the range of values taken by a slice of the 3d image
+ * `ctx->buffers.Q_init` representing the density and stores it in the
+ * context. Note that clEnqueueAcquireGLObjects must be called ahead
+ * of tile to be able to read the shared texture between openGL and
+ * openCL */
 static void solver_compute_density_range(solver_context_t* ctx);
 
-// Apply periodic boundary conditions to the openCL image `image`
+/** Apply periodic boundary conditions to the openCL image `image` */
 static void solver_set_periodic_boundary_conditions(solver_context_t* ctx, cl_mem image);
 
-// returns the max value of the inner cells (not including the ghost
-// cells) of the 2d image
+/** returns the max value of the inner cells (not including the ghost
+ * cells) of the 2d image */
 static float solver_get_max_value_image2d(solver_context_t* ctx, cl_mem image);
 
-// computes the weno reconstruction of the Euler system of variables Q
-// and computes the associated fluxes
+/** computes the weno reconstruction of the Euler system of variables Q
+ * and computes the associated fluxes */
 static void solver_compute_weno_reconstruction_and_fluxes(solver_context_t* ctx, cl_mem Q);
 
-#ifndef DEBUG
-// dummy static variable to get rid of `no effect expressions warning'
-// when using OPENCL_CATCH_ERROR(error_code) in release mode. This
-// variable should be optimized out by the compiler. We can't discart
-// x completly as it can either be a varible name or an invocation of
-// an opencl function
-static cl_int __error;
-#define OPENCL_CATCH_ERROR(x) __error=(x)
+/** The macro OPENCL_CATCH_ERROR prints to stderr the opencl error name
+ * with the current line number and file name and terminates the
+ * program with EXIT_FAILURE in DEBUG mode. In release mode, this
+ * macro executes the argument and discards the opencl error code. */
+#ifdef NDEBUG
+#define OPENCL_CATCH_ERROR(x) \
+  do { (void) (x); } while (0)
 #else
-// This macro prints to stderr the opencl error name with the current
-// line number and file name and terminates the program with
-// EXIT_FAILURE in DEBUG mode.
 #define OPENCL_CATCH_ERROR(x) do {				\
     cl_int __err_code = (x);					\
     if(__err_code != 0) {					\
@@ -96,8 +92,8 @@ static cl_int __error;
 
 #define CASE_RETURN_STRING(x) case x: return #x;
 
-// return a static string associated with the openCL error code
-// returned by any openCL function
+/** `get_error_string' return a static string associated with the
+ * openCL error code returned by any openCL function */
 static const char* get_error_string(cl_int error) {
   switch (error) {
     CASE_RETURN_STRING(CL_SUCCESS)
@@ -161,7 +157,7 @@ static const char* get_error_string(cl_int error) {
   default: return "CL_UNKNOWN_ERROR";
   }
 }
-#endif
+#endif // NDEBUG
 
 solver_context_t* solver_init(preview_context_t* preview_ctx) {
   solver_context_t* solver_ctx = malloc(sizeof(*solver_ctx));
@@ -421,7 +417,8 @@ void solver_run(solver_context_t* ctx) {
 
   ctx->t += ctx->delta_t;
 
-  printf("t:%f, delta_t:%f\n", ctx->t, ctx->delta_t);
+  printf("\rt:%f, delta_t:%f", ctx->t, ctx->delta_t);
+  fflush(stdout);
 
   solver_compute_density_range(ctx);
 
@@ -430,6 +427,8 @@ void solver_run(solver_context_t* ctx) {
 }
 
 void solver_deinit(solver_context_t* ctx) {
+  printf("\n");
+
   clReleaseMemObject(ctx->buffers.Q_next);
   clReleaseMemObject(ctx->buffers.Q_prev);
   clReleaseMemObject(ctx->buffers.Q_1);
