@@ -15,6 +15,7 @@ A compressible Euler equation GPU finite volume solver to simulate the Kelvin-He
 
 ```shell
 mkdir build
+cd build/
 make all
 ```
 
