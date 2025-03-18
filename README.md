@@ -14,8 +14,7 @@ A compressible Euler equation GPU finite volume solver to simulate the Kelvin-He
 ## Build
 
 ```shell
-mkdir build
-cd build/
-make all
+cmake -S . --preset default
+cmake --build build
 ```
 

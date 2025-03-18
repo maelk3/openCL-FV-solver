@@ -1,0 +1,20 @@
+{
+    "version": 6,
+    "configurePresets": [
+	{
+	    "name": "default",
+	    "displayName": "Default Config",
+	    "description": "Default build using Ninja generator",
+	    "generator": "Ninja",
+	    "binaryDir": "${sourceDir}/build",
+	    "cacheVariables": {
+		"CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+		"CMAKE_BUILD_TYPE": "Release",
+		"CMAKE_C_FLAGS": "-Wall -Wextra -pedantic -fdiagnostics-color=always",
+		"CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+		"CMAKE_LIBRARY_PATH_FLAG": "/home/mael/projects/glew-2.1.0/lib",
+		"CMAKE_BUILD_RPATH": "/home/mael/projects/glew-2.1.0/lib"
+	    }
+	}
+    ]
+}
