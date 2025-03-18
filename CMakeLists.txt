@@ -6,6 +6,6 @@ project(openCL-FV-solver
 
 add_executable(program src/main.c src/utilities.c src/solver.c src/previewer.c)
 
-set_property(TARGET program PROPERTY C_STANDARD 11)
+set_property(TARGET program PROPERTY C_STANDARD 23)
 target_compile_definitions(program PUBLIC CL_TARGET_OPENCL_VERSION=220)
 target_link_libraries(program OpenCL GL SDL2 GLEW EGL m)

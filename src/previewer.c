@@ -2,8 +2,9 @@
 
 #include <GL/glew.h>
 
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "global.h"
 #include "previewer.h"

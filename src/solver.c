@@ -2,6 +2,8 @@
 #include "solver.h"
 #include "utilities.h"
 
+#include <stdlib.h>
+
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #include <EGL/egl.h>
@@ -44,7 +46,7 @@ typedef struct solver_context_t {
 /** callback function by the openCL driver on context errors */
 static void cl_context_callback(const char* errinfo, const void* private_info, size_t cb, void* user_data);
 
-#ifdef DEBUG
+#ifndef NDEBUG
 /** returns a static error string corresponding to the openCL error
  * code */
 static const char* get_error_string(cl_int error);
@@ -481,14 +483,13 @@ void solver_deinit(solver_context_t* ctx) {
   free(ctx);
 }
 
-static void cl_context_callback(const char* errinfo, const void* private_info, size_t cb, void* user_data) {
+static void cl_context_callback(const char* errinfo, [[maybe_unused]] const void* private_info, [[maybe_unused]] size_t cb, [[maybe_unused]] void* user_data) {
   printf("openCL error %s\n", errinfo);
 }
 
 static cl_program build_program_from_source(const char* filepath, const char* build_options, cl_context context, cl_device_id device_id) {
   cl_int error_code = CL_SUCCESS;
-  const char* source_filename = "./kernels/kernels.cl";
-  char* source_string = read_file(source_filename, NULL);
+  char* source_string = read_file(filepath, NULL);
 
   cl_program program = clCreateProgramWithSource(context,
 						 1,
@@ -497,8 +498,7 @@ static cl_program build_program_from_source(const char* filepath, const char* bu
 						 &error_code);
   OPENCL_CATCH_ERROR(error_code);
 
-  const char options[] = "-cl-std=CL2.0";
-  clBuildProgram(program, 1, &device_id, options, NULL, NULL);
+  clBuildProgram(program, 1, &device_id, build_options, NULL, NULL);
   OPENCL_CATCH_ERROR(error_code);
 
   cl_build_status build_status;
@@ -509,7 +509,7 @@ static cl_program build_program_from_source(const char* filepath, const char* bu
 			&build_status,
 			NULL);
   if(build_status != CL_BUILD_SUCCESS) {
-    fprintf(stderr, "Failed to compile %s:\n", source_filename);
+    fprintf(stderr, "Failed to compile %s:\n", filepath);
 
     size_t log_size;
     clGetProgramBuildInfo(program,
